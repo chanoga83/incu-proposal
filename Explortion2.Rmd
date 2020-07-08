@@ -1,0 +1,128 @@
+---
+title: "Exploration2"
+author: "Mo Tatlhego"
+date: "7/7/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r, include=FALSE}
+setwd('C:/Users/Mo/Documents/Capanda/pointshp')
+library(tidyverse)
+```
+
+Read ndvi and topo data with their distance from dam
+
+```{r}
+ndvis <- read.csv('nd_dist.csv')
+varr <- read.csv('phys_dist.csv')
+#gather useful columns
+ndvis <- ndvis[, c("pointid","grid_code","grid_cod_1",
+                   "grid_cod_2","grid_cod_3","grid_cod_4",
+                   "NEAR_DIST","x", "y")]
+names(ndvis) <- c("id","2000","2005","2010","2015",
+                  "2019","distance","x", "y")
+names(ndvis)
+
+```
+
+Clean topo variables the same way
+
+```{r, echo=FALSE}
+varr <- varr[, c("pointid","grid_code","grid_cod_1",
+                 "grid_cod_2","NEAR_DIST","x","y")]
+names(varr)<- c("id", "aspect","altitude",
+                "slope","distance_topo","x","y")
+names(varr)
+```
+
+To plot we need long format
+
+```{r}
+ndvi_lon <- gather(ndvis,year, ndvi, '2000':'2019')
+#boxplot of spread oof ndvi per year
+ggplot(ndvi_lon, aes(x=year, y=ndvi, fill=as.factor(year))) + 
+  geom_boxplot() +
+  xlab("Year") +
+  theme(legend.position="none") +
+  xlab("")+
+  theme_bw()+
+  labs(fill = "Year")
+```
+
+Plot ndvi values with distance, fill= year
+
+```{r}
+
+
+ggplot(data=ndvi_lon, aes(x=ndvi, group=year,
+                          fill=year)) +
+    geom_density(adjust=1.5) +
+    theme_bw() +
+    facet_wrap(~year) +
+    theme(
+      legend.position="none",
+      axis.ticks.x=element_blank())
+```
+
+```{r}
+#merge ndvis ith topo variables
+df <- merge(ndvis, varr, 
+                by = c("id"))
+names(df)
+```
+change full df to long format
+
+```{r}
+df_lon <- gather(df,year, ndvi, '2000':'2019')
+head(df_lon)
+```
+
+Lets try plot of ndvi with topographic variables
+
+```{r}
+plot(ndvi~ aspect, data = df_lon)
+```
+
+ndvi vs slope
+
+```{r}
+plot(ndvi~ slope, data = df_lon)
+abline(lm(ndvi~slope, data = df_lon))
+```
+
+ndvi vs altitude
+
+```{r}
+plot(ndvi ~ altitude, data = df_lon)
+```
+
+perform a linear mixed effects assessment
+
+```{r}
+library(lme4)
+mixed.lmer <- lmer(ndvi ~ distance + (1|year), data = df_lon)
+summary(mixed.lmer)
+```
+
+slope
+
+```{r}
+mlm <- lmer(ndvi ~ slope + (1|year), data = df_lon)
+summary(mlm)
+```
+
+altitude
+```{r}
+ml <- lmer(ndvi ~ altitude + (1|year), data = df_lon)
+summary(ml)
+```
+
+aspect
+
+```{r}
+lmm <- lmer(ndvi ~ aspect + (1|year), data = df_lon)
+summary(lmm)
+```
+
